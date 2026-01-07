@@ -1,6 +1,14 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+
+// Mock User Interface
+const MOCK_USER: User = {
+  id: 'mock-user-id',
+  app_metadata: {},
+  user_metadata: {},
+  aud: 'authenticated',
+  created_at: new Date().toISOString(),
+};
 
 interface AuthContextType {
   user: User | null;
@@ -17,53 +25,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      (async () => {
-        setUser(session?.user ?? null);
-      })();
-    });
-
-    return () => subscription.unsubscribe();
+    // Check local storage for mock session
+    const storedUser = localStorage.getItem('mock_user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    setLoading(false);
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) throw error;
-  };
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 500));
 
-  const signUp = async (email: string, password: string, fullName: string, mobileNumber: string) => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (error) throw error;
-
-    if (data.user) {
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .insert({
-          id: data.user.id,
-          email,
-          full_name: fullName,
-          mobile_number: mobileNumber,
-        });
-
-      if (profileError) throw profileError;
+    if ((email === 'ankit' || email === 'ankit@example.com') && password === '12345678') {
+      setUser(MOCK_USER);
+      localStorage.setItem('mock_user', JSON.stringify(MOCK_USER));
+    } else {
+      throw new Error('Invalid credentials');
     }
   };
 
+  const signUp = async (email: string, password: string, fullName: string, mobileNumber: string) => {
+    // Mock signup - just log them in for now or throw error
+    // For demo simplicity, let's allow it but warn
+    await new Promise(resolve => setTimeout(resolve, 500));
+    console.log('Mock signup:', { email, password, fullName, mobileNumber });
+
+    // Creating a new user for them
+    const newUser = { ...MOCK_USER, id: Math.random().toString(), email };
+    setUser(newUser);
+    localStorage.setItem('mock_user', JSON.stringify(newUser));
+  };
+
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    await new Promise(resolve => setTimeout(resolve, 200));
+    setUser(null);
+    localStorage.removeItem('mock_user');
   };
 
   return (
